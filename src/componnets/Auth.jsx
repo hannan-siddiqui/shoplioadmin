@@ -14,7 +14,6 @@ import {
   UserPlus,
   UserRound,
 } from 'lucide-react'
-import heroImage from '../assets/hero.png'
 import {
   API_BASE_URL,
   api,
@@ -185,10 +184,9 @@ const Auth = () => {
         <section className="mx-auto grid min-h-screen w-full max-w-7xl items-center gap-8 px-5 py-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-10">
           <div className="overflow-hidden rounded-lg bg-neutral-950 text-white shadow-xl">
             <div className="relative min-h-[420px] p-8 sm:p-10">
-              <img
-                src={heroImage}
-                alt=""
-                className="absolute bottom-8 right-6 h-44 w-44 object-contain opacity-80 sm:h-60 sm:w-60"
+              <ShoppingBag
+                className="absolute bottom-8 right-6 h-44 w-44 text-white/10 sm:h-60 sm:w-60"
+                aria-hidden="true"
               />
               <div className="relative z-10 max-w-md">
                 <span className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-xs font-semibold uppercase text-emerald-200">
@@ -278,12 +276,9 @@ const Auth = () => {
         <aside className="hidden overflow-hidden rounded-lg bg-neutral-950 text-white shadow-xl lg:block">
           <div className="relative min-h-[650px] p-10">
             <div className="absolute inset-x-0 bottom-0 h-48 bg-indigo-700" aria-hidden="true" />
-            <div className="absolute bottom-16 right-8 h-72 w-72 rounded-lg border border-white/10 bg-white/5" />
-            <img
-              src={heroImage}
-              alt=""
-              className="absolute bottom-20 right-16 h-72 w-72 object-contain"
-            />
+            <div className="absolute bottom-16 right-8 flex h-72 w-72 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+              <ShoppingBag className="h-40 w-40 text-white/20" aria-hidden="true" />
+            </div>
 
             <div className="relative z-10 flex h-full min-h-[570px] flex-col justify-between">
               <div>

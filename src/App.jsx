@@ -1,5 +1,10 @@
 import Auth from './componnets/Auth'
-import AdminDashboard from './componnets/AdminDashboard'
+import AdminLayout from './componnets/admin/AdminLayout'
+import Overview from './componnets/admin/Overview'
+import Products from './componnets/admin/Products'
+import Categories from './componnets/admin/Categories'
+import Orders from './componnets/admin/Orders'
+import Users from './componnets/admin/Users'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 function App() {
@@ -7,7 +12,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Auth />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Overview />} />
+          <Route path="products" element={<Products />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="users" element={<Users />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
