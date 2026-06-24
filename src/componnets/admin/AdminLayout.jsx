@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import {
   FolderTree,
+  Layers,
   LayoutDashboard,
   LogOut,
   Package,
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/categories', label: 'Categories', icon: FolderTree },
+  { to: '/admin/collections', label: 'Collections', icon: Layers },
   { to: '/admin/orders', label: 'Orders', icon: Truck },
   { to: '/admin/users', label: 'Users', icon: Users },
 ]

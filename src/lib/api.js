@@ -90,6 +90,13 @@ export const categoriesApi = {
   remove: (id) => api.delete(`/categories/${id}`),
 }
 
+export const collectionsApi = {
+  list: (params) => api.get('/collections', { params }),
+  create: (data) => api.post('/collections', data),
+  update: (id, data) => api.put(`/collections/${id}`, data),
+  remove: (id) => api.delete(`/collections/${id}`),
+}
+
 export const ordersApi = {
   list: (params) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),

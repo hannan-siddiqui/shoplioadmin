@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, PackagePlus, Pencil, RefreshCw, Search, Trash2 } from 'lucide-react'
-import { categoriesApi, productsApi } from '../../lib/api'
+import { Check, Loader2, PackagePlus, Pencil, RefreshCw, Search, Trash2, X } from 'lucide-react'
+import { categoriesApi, collectionsApi, productsApi } from '../../lib/api'
 import {
   EmptyRow,
   LoadingRow,
@@ -19,16 +19,117 @@ const emptyForm = {
   description: '',
   price: '',
   stock: '',
-  category_id: '',
+  categoryIds: [],
+  collectionIds: [],
+}
+
+/** Reusable multi-select checkbox dropdown */
+const MultiSelect = ({ label, options, selected, onChange, placeholder = 'Select…' }) => {
+  const [open, setOpen] = useState(false)
+
+  const toggle = (id) => {
+    onChange(
+      selected.includes(id)
+        ? selected.filter((v) => v !== id)
+        : [...selected, id],
+    )
+  }
+
+  const selectedNames = options
+    .filter((o) => selected.includes(o.id))
+    .map((o) => o.name)
+
+  return (
+    <div className="block">
+      <span className="mb-2 block text-sm font-semibold text-neutral-800">{label}</span>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex h-11 w-full items-center justify-between gap-2 rounded-md border border-neutral-300 px-3 text-left text-sm font-medium outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+        >
+          <span className={`truncate ${selectedNames.length === 0 ? 'text-neutral-400' : 'text-neutral-900'}`}>
+            {selectedNames.length === 0 ? placeholder : selectedNames.join(', ')}
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-indigo-600">
+            {selected.length > 0 ? `${selected.length}` : ''}
+          </span>
+        </button>
+
+        {open && (
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-neutral-200 bg-white shadow-lg">
+              {options.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-neutral-400">No options available</p>
+              ) : (
+                options.map((option) => {
+                  const isSelected = selected.includes(option.id)
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => toggle(option.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition hover:bg-neutral-50 ${
+                        isSelected ? 'font-semibold text-indigo-700' : 'text-neutral-700'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                          isSelected
+                            ? 'border-indigo-600 bg-indigo-600 text-white'
+                            : 'border-neutral-300'
+                        }`}
+                      >
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </span>
+                      {option.name}
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Selected chips */}
+      {selectedNames.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {options
+            .filter((o) => selected.includes(o.id))
+            .map((o) => (
+              <span
+                key={o.id}
+                className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700"
+              >
+                {o.name}
+                <button
+                  type="button"
+                  onClick={() => toggle(o.id)}
+                  className="rounded-full p-0.5 transition hover:bg-indigo-100"
+                  aria-label={`Remove ${o.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const Products = () => {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [collections, setCollections] = useState([])
   const [pagination, setPagination] = useState(null)
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [collectionFilter, setCollectionFilter] = useState('')
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,16 +146,19 @@ const Products = () => {
         limit: 50,
         ...(query ? { search: query } : {}),
         ...(categoryFilter ? { category_id: categoryFilter } : {}),
+        ...(collectionFilter ? { collection: collectionFilter } : {}),
       }
 
-      const [productsRes, categoriesRes] = await Promise.all([
+      const [productsRes, categoriesRes, collectionsRes] = await Promise.all([
         productsApi.list(params),
         categoriesApi.list({ page: 1, limit: 100 }),
+        collectionsApi.list({ page: 1, limit: 100 }),
       ])
 
       setProducts(productsRes.data?.data || [])
       setPagination(productsRes.data?.pagination || null)
       setCategories(categoriesRes.data?.data || [])
+      setCollections(collectionsRes.data?.data || [])
     } catch (error) {
       setMessage({
         type: 'error',
@@ -63,7 +167,7 @@ const Products = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [query, categoryFilter])
+  }, [query, categoryFilter, collectionFilter])
 
   useEffect(() => {
     void loadData()
@@ -86,7 +190,8 @@ const Products = () => {
       description: product.description || '',
       price: String(product.price ?? ''),
       stock: String(product.stock ?? ''),
-      category_id: String(product.category?.id || product.category_id || ''),
+      categoryIds: (product.categories || []).map((c) => c.id),
+      collectionIds: (product.collections || []).map((c) => c.id),
     })
     setMessage(null)
   }
@@ -94,8 +199,8 @@ const Products = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    if (!form.name.trim() || form.price === '' || !form.category_id) {
-      setMessage({ type: 'error', text: 'Name, price, and category are required.' })
+    if (!form.name.trim() || form.price === '') {
+      setMessage({ type: 'error', text: 'Name and price are required.' })
       return
     }
 
@@ -107,7 +212,8 @@ const Products = () => {
       description: form.description.trim(),
       price: Number(form.price),
       stock: Number(form.stock || 0),
-      category_id: Number(form.category_id),
+      categoryIds: form.categoryIds,
+      collectionIds: form.collectionIds,
     }
 
     try {
@@ -187,15 +293,21 @@ const Products = () => {
               <textarea name="description" value={form.description} onChange={updateForm} rows="3" placeholder="Short catalogue description" className={textareaClass} />
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-neutral-800">Category</span>
-              <select name="category_id" value={form.category_id} onChange={updateForm} className={inputClass}>
-                <option value="">Select category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
-            </label>
+            <MultiSelect
+              label="Categories"
+              options={categories}
+              selected={form.categoryIds}
+              onChange={(ids) => setForm((f) => ({ ...f, categoryIds: ids }))}
+              placeholder="Select categories"
+            />
+
+            <MultiSelect
+              label="Collections"
+              options={collections}
+              selected={form.collectionIds}
+              onChange={(ids) => setForm((f) => ({ ...f, collectionIds: ids }))}
+              placeholder="Select collections"
+            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
@@ -243,6 +355,17 @@ const Products = () => {
                 ))}
               </select>
 
+              <select
+                value={collectionFilter}
+                onChange={(event) => setCollectionFilter(event.target.value)}
+                className="h-11 rounded-md border border-neutral-300 px-3 text-sm font-medium outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">All collections</option>
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.slug}>{collection.name}</option>
+                ))}
+              </select>
+
               <form onSubmit={handleSearch} className="flex min-w-0 gap-2">
                 <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-neutral-300 px-3 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
                   <Search className="h-4 w-4 shrink-0 text-neutral-500" aria-hidden="true" />
@@ -264,7 +387,8 @@ const Products = () => {
               <thead className="bg-neutral-50 text-xs font-semibold uppercase text-neutral-500">
                 <tr>
                   <th className="px-5 py-3">Product</th>
-                  <th className="px-5 py-3">Category</th>
+                  <th className="px-5 py-3">Categories</th>
+                  <th className="px-5 py-3">Collections</th>
                   <th className="px-5 py-3">Price</th>
                   <th className="px-5 py-3">Stock</th>
                   <th className="px-5 py-3 text-right">Actions</th>
@@ -272,17 +396,38 @@ const Products = () => {
               </thead>
               <tbody className="divide-y divide-neutral-200 bg-white">
                 {isLoading ? (
-                  <LoadingRow colSpan={5} label="Loading catalogue..." />
+                  <LoadingRow colSpan={6} label="Loading catalogue..." />
                 ) : products.length === 0 ? (
-                  <EmptyRow colSpan={5} label="No products found." />
+                  <EmptyRow colSpan={6} label="No products found." />
                 ) : (
                   products.map((product) => (
                     <tr key={product.id} className="hover:bg-neutral-50">
-                      <td className="max-w-[240px] px-5 py-4">
+                      <td className="max-w-[200px] px-5 py-4">
                         <p className="font-semibold text-neutral-950">{product.name}</p>
                         <p className="mt-1 truncate text-xs text-neutral-500">{product.description || 'No description'}</p>
                       </td>
-                      <td className="px-5 py-4 text-neutral-700">{product.category?.name || '-'}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(product.categories || []).length > 0
+                            ? product.categories.map((c) => (
+                                <span key={c.id} className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                  {c.name}
+                                </span>
+                              ))
+                            : <span className="text-neutral-400">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {(product.collections || []).length > 0
+                            ? product.collections.map((c) => (
+                                <span key={c.id} className="inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                                  {c.name}
+                                </span>
+                              ))
+                            : <span className="text-neutral-400">—</span>}
+                        </div>
+                      </td>
                       <td className="px-5 py-4 font-semibold">{formatCurrency(product.price)}</td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ${Number(product.stock || 0) <= 5 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
